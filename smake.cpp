@@ -14,16 +14,6 @@ private:
   std::stack<std::string> commands;
   std::string info;
   
-public:
-  static std::stack<Rules*> rules;
-  static std::unordered_map<std::string, Rules*> rules_table;
-  
-  Rules(std::string rule_name): name(rule_name) {
-    if (rules.empty()) rules_table["head"] = this;
-    rules.push(this);
-    rules_table[name] = this;
-  }
-
   void set_command(std::string cmds) {
     commands.push(cmds);
   }
@@ -43,6 +33,16 @@ public:
     info = _info;
   }
   
+public:
+  static std::stack<Rules*> rules;
+  static std::unordered_map<std::string, Rules*> rules_table;
+  
+  Rules(std::string rule_name): name(rule_name) {
+    if (rules.empty()) rules_table["head"] = this;
+    rules.push(this);
+    rules_table[name] = this;
+  }
+
   static void load(void) {
     std::ifstream fin("Makefile");
     std::string line;
