@@ -95,6 +95,7 @@ public:
 	exit(res_code);
       }
     }
+    if (head->info != "") std::cout << head->info << std::endl;
   }
   
   static void run(void) {
