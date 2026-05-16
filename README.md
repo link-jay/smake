@@ -9,3 +9,6 @@ Simple make but with message.
 
 ## Quick Start
 run command `c++ smake.cpp -o smake` and prepare a `Makefile`, then run `./smake`.
+
+## Process
+![process.svg](process.svg)

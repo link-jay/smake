@@ -1,0 +1,15 @@
+digraph G {
+    "target_rule" -> "relay_rule==relay_file"
+    "relay_rule==relay_file" [shape=diamond]
+    "relay_rule==relay_file" -> "relay_rule/relay_file" [label="N"]
+    "relay_rule/relay_file" -> "run_command" [label="relay_rule"]
+    "relay_rule/relay_file" -> "n1"  [label="relay_file"]
+    "n1" -> "pass" [xlabel="older"]
+    "n1" -> "run_command" [label="newer"]
+    "n1" [label="check_modify_time"]
+    "relay_rule==relay_file" -> "n2" [label="Y"]
+    "n2" -> "pass" [label="older"]
+    "n2" -> "run_relay_rule" [label="newer"]
+    "n2" [label="check_modify_time"]
+    "run_relay_rule" -> "run_command"
+}
