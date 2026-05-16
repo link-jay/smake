@@ -46,7 +46,6 @@ public:
   static std::unordered_map<std::string, Rules*> rules_table;
   
   Rules(std::string rule_name): name(rule_name) {
-    if (rules.empty()) rules_table["head"] = this;
     rules.push_back(this);
     rules_table[name] = this;
   }
@@ -77,6 +76,12 @@ public:
 	  }
 	} else {
 	  assert(0);
+	}
+	if (Rules::rules.size() == 1) {
+	  Rules* head_rule = new Rules("_");
+	  head_rule->set_dependence(Rules::rules[0]->name);
+	  Rules::rules.insert(Rules::rules.begin(), head_rule);
+	  Rules::rules.pop_back();
 	}
       }
     }
@@ -118,7 +123,7 @@ public:
   }
   
   static void run(void) {
-    run_rule("head");
+    run_rule("_");
   }
   
   static void dump(void) {
@@ -130,7 +135,7 @@ public:
       }
       puts("");
       printf("[COMMANDS] ");
-      for (size_t i = 0; i < Rules::rules[i]->commands.size(); i++) {
+      for (size_t i = 0; i < Rules::rules[j]->commands.size(); i++) {
 	std::cout << Rules::rules[j]->commands[i] << std::endl;
       }
       std::cout << "[INFO] " << Rules::rules[j]->info <<std::endl;
