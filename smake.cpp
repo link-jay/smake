@@ -3,7 +3,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <stack>
 #include <cstdlib>
 #include <sys/wait.h>
 #include <assert.h>
@@ -35,12 +34,12 @@ private:
   }
   
 public:
-  static std::stack<Rules*> rules;
+  static std::vector<Rules*> rules;
   static std::unordered_map<std::string, Rules*> rules_table;
   
   Rules(std::string rule_name): name(rule_name) {
     if (rules.empty()) rules_table["head"] = this;
-    rules.push(this);
+    rules.push_back(this);
     rules_table[name] = this;
   }
 
@@ -54,7 +53,7 @@ public:
     while (getline(makefile, line)) {
       if (line[0] == '\t') {
 	if (rules.empty()) assert(0);
-	rules.top()->set_command(line.substr(1, -1));
+	rules.back()->set_command(line.substr(1, -1));
       }
       else if (line[0] == '\0') continue;
       else {
@@ -99,39 +98,30 @@ public:
   }
   
   static void dump(void) {
-    std::stack<Rules*> ttmp = rules;
-    std::stack<Rules*> tmp;
-    while (!ttmp.empty()) {
-      tmp.push(ttmp.top());
-      ttmp.pop();
-    }
-    while (!tmp.empty()) {
-      Rules* it = tmp.top();
-      std::cout << "[RULE] " << it->name << std::endl;
+    for (size_t j = 0; j < Rules::rules.size(); j++) {
+      std::cout << "[RULE] " << Rules::rules[j]->name << std::endl;
       printf("[DEPENDENCE] ");
-      for (size_t i = 0; i < it->dependence.size(); i++) {
-	std::cout << it->dependence[i] << " ";
+      for (size_t i = 0; i < Rules::rules[j]->dependence.size(); i++) {
+	std::cout << Rules::rules[j]->dependence[i] << " ";
       }
       puts("");
       printf("[COMMANDS] ");
-      for (size_t i = 0; i < it->commands.size(); i++) {
-	std::cout << it->commands[i] << std::endl;
+      for (size_t i = 0; i < Rules::rules[i]->commands.size(); i++) {
+	std::cout << Rules::rules[j]->commands[i] << std::endl;
       }
-      std::cout << "[INFO] " << it->info <<std::endl;
+      std::cout << "[INFO] " << Rules::rules[j]->info <<std::endl;
       puts("");
-      tmp.pop();
     }
   }
   
   static void free(void) {
-    while (!Rules::rules.empty()) {
-      delete rules.top();
-      rules.pop();
+    for (size_t i = 0; i < Rules::rules.size(); i++) {
+      delete rules[i];
     }
   }
   
 };
-std::stack<Rules*> Rules::rules;
+std::vector<Rules*> Rules::rules;
 std::unordered_map<std::string, Rules*> Rules::rules_table;
 
 int main() {
