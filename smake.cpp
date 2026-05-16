@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <unordered_map>
+#include <vector>
 #include <stack>
 #include <cstdlib>
 #include <sys/wait.h>
@@ -11,11 +12,11 @@ class Rules {
 private:
   std::string name;
   std::stack<std::string> dependence;
-  std::stack<std::string> commands;
+  std::vector<std::string> commands;
   std::string info;
   
   void set_command(std::string cmds) {
-    commands.push(cmds);
+    commands.push_back(cmds);
   }
   
   void set_dependence(std::string dep) {
@@ -44,13 +45,13 @@ public:
   }
 
   static void load(void) {
-    std::ifstream fin("Makefile");
-    if (!fin) {
+    std::ifstream makefile("Makefile");
+    if (!makefile) {
       std::cerr << "Error: Must prepare a Makefile." << std::endl;
       exit(1);
     }
     std::string line;
-    while (getline(fin, line)) {
+    while (getline(makefile, line)) {
       if (line[0] == '\t') {
 	if (rules.empty()) assert(0);
 	rules.top()->set_command(line.substr(1, -1));
@@ -72,7 +73,7 @@ public:
 	}
       }
     }
-    fin.close();
+    makefile.close();
   }  
   
   static void run_rule(std::string target) {
@@ -83,16 +84,9 @@ public:
       run_rule(tmp.top());
       tmp.pop();
     }
-    tmp = std::stack<std::string>();
-    tmp2 = head->commands;
-    while (!tmp2.empty()) {
-      tmp.push(tmp2.top());
-      tmp2.pop();
-    }
-    while (!tmp.empty()) {
-      std::cout << "[CMD] " << tmp.top() << std::endl;
-      size_t res = system(tmp.top().c_str());
-      tmp.pop();
+    for (size_t i = 0; i < head->commands.size(); i++) {
+      std::cout << "[CMD] " << head->commands[i] << std::endl;
+      size_t res = system(head->commands[i].c_str());
       size_t res_code = WEXITSTATUS(res);
       if (res_code != 0) {
 	Rules::free();
@@ -128,15 +122,8 @@ public:
       }
       puts("");
       printf("[COMMANDS] ");
-      tmp1 = std::stack<std::string>();
-      tmp2 = it->commands;
-      while (!tmp2.empty()) {
-	tmp1.push(tmp2.top());
-	tmp2.pop();
-      }
-      while (!tmp1.empty()) {
-	std::cout << tmp1.top() << " ";
-	tmp1.pop();
+      for (size_t i = 0; i < it->commands.size(); i++) {
+	std::cout << it->commands[i] << " ";
       }
       puts("");
       std::cout << "[INFO] " << it->info <<std::endl;
