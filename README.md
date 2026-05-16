@@ -4,7 +4,7 @@ Simple make but with message.
 ## Feature
   * [x] print message when rules finished.
   * [ ] run specified rule.
-  * [ ] track modified files
+  * [x] track modified files
   * [ ] different message in different status.
 
 ## Quick Start

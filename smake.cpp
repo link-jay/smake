@@ -17,11 +17,12 @@ private:
   std::vector<std::string> commands;
   std::string info;
   fs::path file;
-  
+  fs::file_time_type last_modify_time;
+
   void set_command(std::string cmds) {
     commands.push_back(cmds);
   }
-  
+
   void set_dependence(std::string dep) {
     size_t s_pos = 0;
     size_t e_pos = dep.find(' ', s_pos);
@@ -32,22 +33,48 @@ private:
     }
     this->dependence.push_back(dep.substr(s_pos, -1));
   }
-  
-  void regist_file(fs::path f) {
+
+  void set_file(fs::path f) {
     file = f;
+  }
+  
+  void set_time(fs::file_time_type t) {
+    last_modify_time = t;
   }
   
   void set_info(std::string _info) {
     info = _info;
   }
-  
+
 public:
   static std::vector<Rules*> rules;
   static std::unordered_map<std::string, Rules*> rules_table;
-  
+
   Rules(std::string rule_name): name(rule_name) {
     rules.push_back(this);
     rules_table[name] = this;
+  }
+
+  static bool check_file_exsit(std::string target_name) {
+    for (const auto& entry : fs::directory_iterator("./")) {
+      fs::path file_name = entry.path().filename().string();
+      if (file_name == target_name) return true;
+    }
+    return false;
+  }
+
+  static void regist_file() {
+    for (const auto& entry : fs::directory_iterator("./")) {
+      fs::path file_name = entry.path().filename();
+      if ((Rules::rules_table.count(file_name.string())) != 0) {
+	if (Rules::rules_table[file_name.string()]->file.empty()) {
+	  Rules::rules_table[file_name.string()]->set_file(file_name);
+	} else {
+	  ;;
+	}
+	Rules::rules_table[file_name.string()]->set_time(fs::last_write_time(file_name));
+      }
+    }
   }
 
   static void load(void) {
@@ -86,46 +113,53 @@ public:
       }
     }
     makefile.close();
-    for (const auto& entry : fs::directory_iterator("./")) {
-      fs::path file_name = entry.path().filename();
-      if ((Rules::rules_table.count(file_name.string())) != 0) {
-	Rules::rules_table[file_name.string()]->regist_file(file_name);
+    regist_file();
+  }
+    
+  static void run_rule(std::string target) {
+    if (Rules::rules_table.count(target) == 0) assert(0);
+    Rules* target_rule = Rules::rules_table[target];
+    for (size_t i = 0; i < target_rule->dependence.size(); i++) {
+      std::string relay = target_rule->dependence[i];
+      if (relay == "") break;
+      if (Rules::rules_table.count(relay) != 0) {
+	Rules* relay_rule = Rules::rules_table[relay];
+	if (!relay_rule->file.empty()) {
+	  if (target_rule->last_modify_time > relay_rule->last_modify_time) {
+	    continue;
+	  } else {
+	    run_rule(relay_rule->name);
+	  }
+	} else {
+	  run_rule(relay_rule->name);
+	}
+      } else {
+	assert(Rules::check_file_exsit(relay));
+	if (target_rule->last_modify_time > fs::last_write_time(target_rule->dependence[i])) {
+	  continue;
+	} else {
+	  goto run_commands;
+	}
       }
     }
-  }
-  
-  static void run_rule(std::string target) {
-    if (!Rules::rules_table.count(target)) return;
-    Rules* head = Rules::rules_table[target];
-    for (size_t i = 0; i < head->dependence.size(); i++) {
-      run_rule(head->dependence[i]);
-    }
-    for (size_t i = 0; i < head->commands.size(); i++) {
-      std::cout << "[CMD] " << head->commands[i] << std::endl;
-      size_t res = system(head->commands[i].c_str());
-      size_t res_code = WEXITSTATUS(res);
+  run_commands:
+    for (size_t i = 0; i < target_rule->commands.size(); i++) {
+      std::cout << "[CMD] " << target_rule->commands[i] << std::endl;
+      int res = system(target_rule->commands[i].c_str());
+      int res_code = WEXITSTATUS(res);
       if (res_code != 0) {
 	Rules::free();
 	exit(res_code);
       }
-    }
-    if (head->info != "") std::cout << "[INFO] " << head->info << std::endl;
-    for (const auto& entry : fs::directory_iterator("./")) {
-      fs::path file_name = entry.path().filename();
-      if ((Rules::rules_table.count(file_name.string())) != 0) {
-	if (Rules::rules_table[file_name.string()]->file.empty()) {
-	  Rules::rules_table[file_name.string()]->regist_file(file_name);
-	} else {
-	  ;;
-	}
-      }
+      if (target_rule->info != "") std::cout << "[INFO] " << target_rule->info << std::endl;
+      regist_file();
     }
   }
-  
+
   static void run(void) {
     run_rule("_");
   }
-  
+
   static void dump(void) {
     for (size_t j = 0; j < Rules::rules.size(); j++) {
       std::cout << "[RULE] " << Rules::rules[j]->name << std::endl;
@@ -143,13 +177,13 @@ public:
       puts("");
     }
   }
-  
+
   static void free(void) {
     for (size_t i = 0; i < Rules::rules.size(); i++) {
       delete rules[i];
     }
   }
-  
+
 };
 std::vector<Rules*> Rules::rules;
 std::unordered_map<std::string, Rules*> Rules::rules_table;

@@ -1,4 +1,4 @@
-foo.txt:bar.txt baz.txt test:Create foo.txt
+run:bar.txt baz.txt:Create foo.txt
 	touch foo.txt
 
 bar.txt::Create bar.txt
@@ -7,5 +7,5 @@ bar.txt::Create bar.txt
 baz.txt::Create baz.txt
 	touch baz.txt
 
-test::just test
-	true
+clean::clean all.
+	echo clean
