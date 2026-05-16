@@ -11,7 +11,7 @@
 class Rules {
 private:
   std::string name;
-  std::stack<std::string> dependence;
+  std::vector<std::string> dependence;
   std::vector<std::string> commands;
   std::string info;
   
@@ -23,11 +23,11 @@ private:
     size_t s_pos = 0;
     size_t e_pos = dep.find(' ', s_pos);
      while (e_pos != std::string::npos) {
-      this->dependence.push(dep.substr(s_pos, e_pos));
+      this->dependence.push_back(dep.substr(s_pos, e_pos));
       s_pos = e_pos + 1;
       e_pos = dep.find(' ', s_pos);
     }
-    this->dependence.push(dep.substr(s_pos, -1));
+    this->dependence.push_back(dep.substr(s_pos, -1));
   }
   
   void set_info(std::string _info) {
@@ -79,10 +79,8 @@ public:
   static void run_rule(std::string target) {
     if (!Rules::rules_table.count(target)) return;
     Rules* head = Rules::rules_table[target];
-    std::stack<std::string> tmp2, tmp = head->dependence;
-    while (!tmp.empty()) {
-      run_rule(tmp.top());
-      tmp.pop();
+    for (size_t i = 0; i < head->dependence.size(); i++) {
+      run_rule(head->dependence[i]);
     }
     for (size_t i = 0; i < head->commands.size(); i++) {
       std::cout << "[CMD] " << head->commands[i] << std::endl;
@@ -111,21 +109,14 @@ public:
       Rules* it = tmp.top();
       std::cout << "[RULE] " << it->name << std::endl;
       printf("[DEPENDENCE] ");
-      std::stack<std::string> tmp1, tmp2 = it->dependence;
-      while (!tmp2.empty()) {
-	tmp1.push(tmp2.top());
-	tmp2.pop();
-      }
-      while (!tmp1.empty()) {
-	std::cout << tmp1.top() << " ";
-	tmp1.pop();
+      for (size_t i = 0; i < it->dependence.size(); i++) {
+	std::cout << it->dependence[i] << " ";
       }
       puts("");
       printf("[COMMANDS] ");
       for (size_t i = 0; i < it->commands.size(); i++) {
-	std::cout << it->commands[i] << " ";
+	std::cout << it->commands[i] << std::endl;
       }
-      puts("");
       std::cout << "[INFO] " << it->info <<std::endl;
       puts("");
       tmp.pop();
@@ -146,7 +137,8 @@ std::unordered_map<std::string, Rules*> Rules::rules_table;
 int main() {
   Rules::load();
   Rules::run();
-  // Rules::dump();
+  puts("");
+  Rules::dump();
   Rules::free();
   return 0;
 }
