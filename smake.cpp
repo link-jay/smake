@@ -2,7 +2,7 @@
 #include <fstream>
 #include <string>
 #include <unordered_map>
-#include <stack>
+#include <vector>
 #include <cstdlib>
 #include <sys/wait.h>
 #include <assert.h>
@@ -10,23 +10,23 @@
 class Rules {
 private:
   std::string name;
-  std::stack<std::string> dependence;
-  std::stack<std::string> commands;
+  std::vector<std::string> dependence;
+  std::vector<std::string> commands;
   std::string info;
   
   void set_command(std::string cmds) {
-    commands.push(cmds);
+    commands.push_back(cmds);
   }
   
   void set_dependence(std::string dep) {
     size_t s_pos = 0;
     size_t e_pos = dep.find(' ', s_pos);
      while (e_pos != std::string::npos) {
-      this->dependence.push(dep.substr(s_pos, e_pos));
+      this->dependence.push_back(dep.substr(s_pos, e_pos));
       s_pos = e_pos + 1;
       e_pos = dep.find(' ', s_pos);
     }
-    this->dependence.push(dep.substr(s_pos, -1));
+    this->dependence.push_back(dep.substr(s_pos, -1));
   }
   
   void set_info(std::string _info) {
@@ -34,26 +34,26 @@ private:
   }
   
 public:
-  static std::stack<Rules*> rules;
+  static std::vector<Rules*> rules;
   static std::unordered_map<std::string, Rules*> rules_table;
   
   Rules(std::string rule_name): name(rule_name) {
     if (rules.empty()) rules_table["head"] = this;
-    rules.push(this);
+    rules.push_back(this);
     rules_table[name] = this;
   }
 
   static void load(void) {
-    std::ifstream fin("Makefile");
-    if (!fin) {
+    std::ifstream makefile("Makefile");
+    if (!makefile) {
       std::cerr << "Error: Must prepare a Makefile." << std::endl;
       exit(1);
     }
     std::string line;
-    while (getline(fin, line)) {
+    while (getline(makefile, line)) {
       if (line[0] == '\t') {
 	if (rules.empty()) assert(0);
-	rules.top()->set_command(line.substr(1, -1));
+	rules.back()->set_command(line.substr(1, -1));
       }
       else if (line[0] == '\0') continue;
       else {
@@ -72,27 +72,18 @@ public:
 	}
       }
     }
-    fin.close();
+    makefile.close();
   }  
   
   static void run_rule(std::string target) {
     if (!Rules::rules_table.count(target)) return;
     Rules* head = Rules::rules_table[target];
-    std::stack<std::string> tmp2, tmp = head->dependence;
-    while (!tmp.empty()) {
-      run_rule(tmp.top());
-      tmp.pop();
+    for (size_t i = 0; i < head->dependence.size(); i++) {
+      run_rule(head->dependence[i]);
     }
-    tmp = std::stack<std::string>();
-    tmp2 = head->commands;
-    while (!tmp2.empty()) {
-      tmp.push(tmp2.top());
-      tmp2.pop();
-    }
-    while (!tmp.empty()) {
-      std::cout << "[CMD] " << tmp.top() << std::endl;
-      size_t res = system(tmp.top().c_str());
-      tmp.pop();
+    for (size_t i = 0; i < head->commands.size(); i++) {
+      std::cout << "[CMD] " << head->commands[i] << std::endl;
+      size_t res = system(head->commands[i].c_str());
       size_t res_code = WEXITSTATUS(res);
       if (res_code != 0) {
 	Rules::free();
@@ -107,59 +98,37 @@ public:
   }
   
   static void dump(void) {
-    std::stack<Rules*> ttmp = rules;
-    std::stack<Rules*> tmp;
-    while (!ttmp.empty()) {
-      tmp.push(ttmp.top());
-      ttmp.pop();
-    }
-    while (!tmp.empty()) {
-      Rules* it = tmp.top();
-      std::cout << "[RULE] " << it->name << std::endl;
+    for (size_t j = 0; j < Rules::rules.size(); j++) {
+      std::cout << "[RULE] " << Rules::rules[j]->name << std::endl;
       printf("[DEPENDENCE] ");
-      std::stack<std::string> tmp1, tmp2 = it->dependence;
-      while (!tmp2.empty()) {
-	tmp1.push(tmp2.top());
-	tmp2.pop();
-      }
-      while (!tmp1.empty()) {
-	std::cout << tmp1.top() << " ";
-	tmp1.pop();
+      for (size_t i = 0; i < Rules::rules[j]->dependence.size(); i++) {
+	std::cout << Rules::rules[j]->dependence[i] << " ";
       }
       puts("");
       printf("[COMMANDS] ");
-      tmp1 = std::stack<std::string>();
-      tmp2 = it->commands;
-      while (!tmp2.empty()) {
-	tmp1.push(tmp2.top());
-	tmp2.pop();
+      for (size_t i = 0; i < Rules::rules[i]->commands.size(); i++) {
+	std::cout << Rules::rules[j]->commands[i] << std::endl;
       }
-      while (!tmp1.empty()) {
-	std::cout << tmp1.top() << " ";
-	tmp1.pop();
-      }
+      std::cout << "[INFO] " << Rules::rules[j]->info <<std::endl;
       puts("");
-      std::cout << "[INFO] " << it->info <<std::endl;
-      puts("");
-      tmp.pop();
     }
   }
   
   static void free(void) {
-    while (!Rules::rules.empty()) {
-      delete rules.top();
-      rules.pop();
+    for (size_t i = 0; i < Rules::rules.size(); i++) {
+      delete rules[i];
     }
   }
   
 };
-std::stack<Rules*> Rules::rules;
+std::vector<Rules*> Rules::rules;
 std::unordered_map<std::string, Rules*> Rules::rules_table;
 
 int main() {
   Rules::load();
   Rules::run();
-  // Rules::dump();
+  puts("");
+  Rules::dump();
   Rules::free();
   return 0;
 }
