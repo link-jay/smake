@@ -14,16 +14,6 @@ private:
   std::stack<std::string> commands;
   std::string info;
   
-public:
-  static std::stack<Rules*> rules;
-  static std::unordered_map<std::string, Rules*> rules_table;
-  
-  Rules(std::string rule_name): name(rule_name) {
-    if (rules.empty()) rules_table["head"] = this;
-    rules.push(this);
-    rules_table[name] = this;
-  }
-
   void set_command(std::string cmds) {
     commands.push(cmds);
   }
@@ -43,8 +33,22 @@ public:
     info = _info;
   }
   
+public:
+  static std::stack<Rules*> rules;
+  static std::unordered_map<std::string, Rules*> rules_table;
+  
+  Rules(std::string rule_name): name(rule_name) {
+    if (rules.empty()) rules_table["head"] = this;
+    rules.push(this);
+    rules_table[name] = this;
+  }
+
   static void load(void) {
     std::ifstream fin("Makefile");
+    if (!fin) {
+      std::cerr << "Error: Must prepare a Makefile." << std::endl;
+      exit(1);
+    }
     std::string line;
     while (getline(fin, line)) {
       if (line[0] == '\t') {
@@ -95,7 +99,7 @@ public:
 	exit(res_code);
       }
     }
-    if (head->info != "") std::cout << head->info << std::endl;
+    if (head->info != "") std::cout << "[INFO] " << head->info << std::endl;
   }
   
   static void run(void) {
