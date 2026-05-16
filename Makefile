@@ -1,12 +1,11 @@
-foo:bar baz:compiling foo...
-	true
+run:bar.txt baz.txt:Create foo.txt
+	touch foo.txt
 
-bar::running bar...
-	true
+bar.txt::Create bar.txt
+	touch bar.txt
 
-baz:
-	echo baz
-	echo test
+baz.txt::Create baz.txt
+	touch baz.txt
 
-clean:
-	echo runing clean...
+clean::clean all.
+	echo clean
