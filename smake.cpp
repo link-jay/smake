@@ -116,6 +116,7 @@ public:
     regist_file();
   }
     
+  // BUG: 它不会递归检查文件时间
   static void run_rule(std::string target) {
     if (Rules::rules_table.count(target) == 0) assert(0);
     Rules* target_rule = Rules::rules_table[target];
@@ -134,7 +135,11 @@ public:
 	  run_rule(relay_rule->name);
 	}
       } else {
-	assert(Rules::check_file_exsit(relay));
+	if (!Rules::check_file_exsit(relay)) {
+	  std::cerr << "Error: " << relay << " do not exsit." << std::endl;
+	  Rules::free();
+	  exit(1);
+	}
 	if (target_rule->last_modify_time > fs::last_write_time(target_rule->dependence[i])) {
 	  continue;
 	} else {
