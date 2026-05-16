@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -7,12 +8,15 @@
 #include <sys/wait.h>
 #include <assert.h>
 
+namespace fs = std::filesystem;
+
 class Rules {
 private:
   std::string name;
   std::vector<std::string> dependence;
   std::vector<std::string> commands;
   std::string info;
+  fs::path file;
   
   void set_command(std::string cmds) {
     commands.push_back(cmds);
@@ -22,11 +26,15 @@ private:
     size_t s_pos = 0;
     size_t e_pos = dep.find(' ', s_pos);
      while (e_pos != std::string::npos) {
-      this->dependence.push_back(dep.substr(s_pos, e_pos));
+      this->dependence.push_back(dep.substr(s_pos, e_pos-s_pos));
       s_pos = e_pos + 1;
       e_pos = dep.find(' ', s_pos);
     }
     this->dependence.push_back(dep.substr(s_pos, -1));
+  }
+  
+  void regist_file(fs::path f) {
+    file = f;
   }
   
   void set_info(std::string _info) {
@@ -73,7 +81,13 @@ public:
       }
     }
     makefile.close();
-  }  
+    for (const auto& entry : fs::directory_iterator("./")) {
+      fs::path file_name = entry.path().filename();
+      if ((Rules::rules_table.count(file_name.string())) != 0) {
+	Rules::rules_table[file_name.string()]->regist_file(file_name);
+      }
+    }
+  }
   
   static void run_rule(std::string target) {
     if (!Rules::rules_table.count(target)) return;
@@ -91,6 +105,16 @@ public:
       }
     }
     if (head->info != "") std::cout << "[INFO] " << head->info << std::endl;
+    for (const auto& entry : fs::directory_iterator("./")) {
+      fs::path file_name = entry.path().filename();
+      if ((Rules::rules_table.count(file_name.string())) != 0) {
+	if (Rules::rules_table[file_name.string()]->file.empty()) {
+	  Rules::rules_table[file_name.string()]->regist_file(file_name);
+	} else {
+	  ;;
+	}
+      }
+    }
   }
   
   static void run(void) {
@@ -110,6 +134,7 @@ public:
 	std::cout << Rules::rules[j]->commands[i] << std::endl;
       }
       std::cout << "[INFO] " << Rules::rules[j]->info <<std::endl;
+      std::cout << "[FILE] " << Rules::rules[j]->file.string() << std::endl;
       puts("");
     }
   }
