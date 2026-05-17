@@ -10,6 +10,8 @@
 
 namespace fs = std::filesystem;
 
+typedef enum {NO_FILE, STALE, NO_STALE} file_status;
+
 class Rules {
 private:
   std::string name;
@@ -37,13 +39,26 @@ private:
   void set_file(fs::path f) {
     file = f;
   }
-  
+
   void set_time(fs::file_time_type t) {
     last_modify_time = t;
   }
-  
+
   void set_info(std::string _info) {
     info = _info;
+  }
+
+  void run_command() {
+    for (size_t i = 0; i < commands.size(); i++) {
+      std::cout << "[CMD] " << commands[i] << std::endl;
+      int res = system(commands[i].c_str());
+      int res_code = WEXITSTATUS(res);
+      if (res_code != 0) {
+	Rules::free();
+	exit(res_code);
+      }
+    }
+    if (!info.empty()) std::cout << "[INFO] " << info << std::endl;
   }
 
 public:
@@ -61,6 +76,21 @@ public:
       if (file_name == target_name) return true;
     }
     return false;
+  }
+
+  static bool check_rule_exsit(std::string target_rule) {
+    if (Rules::rules_table.count(target_rule) != 0) return true;
+    else return false;
+  }
+
+  static file_status check_time(std::string target, std::string relay) {
+    Rules* target_rule = Rules::rules_table[target];
+    if (target_rule->file.empty()) return NO_FILE;
+    if (target_rule->last_modify_time < fs::last_write_time(relay)) {
+      return STALE;
+    } else {
+      return NO_STALE;
+    }
   }
 
   static void regist_file() {
@@ -115,49 +145,54 @@ public:
     makefile.close();
     regist_file();
   }
-    
-  // BUG: 它不会递归检查文件时间
+
   static void run_rule(std::string target) {
-    if (Rules::rules_table.count(target) == 0) assert(0);
+    if (Rules::rules_table.count(target) == 0) {
+      std::cerr << "Error: " << target << " do not exsit." << std::endl;
+      Rules::free();
+      exit(1);
+    }
     Rules* target_rule = Rules::rules_table[target];
+    if (target_rule->dependence[0] == "") {
+      target_rule->run_command();
+      return;
+    }
     for (size_t i = 0; i < target_rule->dependence.size(); i++) {
       std::string relay = target_rule->dependence[i];
-      if (relay == "") break;
-      if (Rules::rules_table.count(relay) != 0) {
-	Rules* relay_rule = Rules::rules_table[relay];
-	if (!relay_rule->file.empty()) {
-	  if (target_rule->last_modify_time > relay_rule->last_modify_time) {
-	    continue;
-	  } else {
-	    run_rule(relay_rule->name);
+      if (Rules::check_file_exsit(relay)) {
+	if (Rules::check_time(target, relay) == STALE) {
+	  target_rule->run_command();
+	}
+	else if (Rules::check_time(target, relay) == NO_FILE) {
+	  if (check_rule_exsit(relay)) {
+	    run_rule(relay);
+	    target_rule->run_command();
 	  }
-	} else {
-	  run_rule(relay_rule->name);
+	  else {
+	    continue;
+	  }
+	}
+	else {
+	  if (Rules::check_rule_exsit(relay)) {
+	    run_rule(relay);
+	    if (Rules::check_time(target, relay) == STALE) {
+	      target_rule->run_command();
+	    } else {
+	      continue;
+	    }
+	  } else {
+	    continue;
+	  }
 	}
       } else {
-	if (!Rules::check_file_exsit(relay)) {
+	if (!Rules::check_rule_exsit(relay)) {
 	  std::cerr << "Error: " << relay << " do not exsit." << std::endl;
 	  Rules::free();
 	  exit(1);
 	}
-	if (target_rule->last_modify_time > fs::last_write_time(target_rule->dependence[i])) {
-	  continue;
-	} else {
-	  goto run_commands;
-	}
+	run_rule(relay);
+	target_rule->run_command();
       }
-    }
-  run_commands:
-    for (size_t i = 0; i < target_rule->commands.size(); i++) {
-      std::cout << "[CMD] " << target_rule->commands[i] << std::endl;
-      int res = system(target_rule->commands[i].c_str());
-      int res_code = WEXITSTATUS(res);
-      if (res_code != 0) {
-	Rules::free();
-	exit(res_code);
-      }
-      if (target_rule->info != "") std::cout << "[INFO] " << target_rule->info << std::endl;
-      regist_file();
     }
   }
 
