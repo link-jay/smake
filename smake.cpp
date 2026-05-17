@@ -61,15 +61,6 @@ private:
     if (!info.empty()) std::cout << "[INFO] " << info << std::endl;
   }
 
-public:
-  static std::vector<Rules*> rules;
-  static std::unordered_map<std::string, Rules*> rules_table;
-
-  Rules(std::string rule_name): name(rule_name) {
-    rules.push_back(this);
-    rules_table[name] = this;
-  }
-
   static bool check_file_exsit(std::string target_name) {
     for (const auto& entry : fs::directory_iterator("./")) {
       fs::path file_name = entry.path().filename().string();
@@ -89,7 +80,7 @@ public:
     if (target_rule->last_modify_time < fs::last_write_time(relay)) {
       return STALE;
     } else {
-      return NO_STALE;
+      return NOT_STALE;
     }
   }
 
@@ -105,6 +96,15 @@ public:
 	Rules::rules_table[file_name.string()]->set_time(fs::last_write_time(file_name));
       }
     }
+  }
+
+public:
+  static std::vector<Rules*> rules;
+  static std::unordered_map<std::string, Rules*> rules_table;
+
+  Rules(std::string rule_name): name(rule_name) {
+    rules.push_back(this);
+    rules_table[name] = this;
   }
 
   static void load(void) {
@@ -147,6 +147,7 @@ public:
   }
 
   static void run_rule(std::string target) {
+    bool run = false;
     if (Rules::rules_table.count(target) == 0) {
       std::cerr << "Error: " << target << " do not exsit." << std::endl;
       Rules::free();
@@ -161,12 +162,12 @@ public:
       std::string relay = target_rule->dependence[i];
       if (Rules::check_file_exsit(relay)) {
 	if (Rules::check_time(target, relay) == STALE) {
-	  target_rule->run_command();
+	  run = true;
 	}
 	else if (Rules::check_time(target, relay) == NO_FILE) {
 	  if (check_rule_exsit(relay)) {
 	    run_rule(relay);
-	    target_rule->run_command();
+	    run = true;
 	  }
 	  else {
 	    continue;
@@ -176,7 +177,7 @@ public:
 	  if (Rules::check_rule_exsit(relay)) {
 	    run_rule(relay);
 	    if (Rules::check_time(target, relay) == STALE) {
-	      target_rule->run_command();
+	      run = true;
 	    } else {
 	      continue;
 	    }
@@ -191,9 +192,11 @@ public:
 	  exit(1);
 	}
 	run_rule(relay);
-	target_rule->run_command();
+	run = true;
       }
     }
+    if (run) target_rule->run_command();
+    else return;
   }
 
   static void run(void) {
