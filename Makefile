@@ -1,11 +1,8 @@
-run:bar.txt baz.txt:Create foo.txt
-	touch foo.txt
+run:smake.o:compile a.out
+	c++ smake.o -g -Wall -Wextra -fsanitize=address
 
-bar.txt::Create bar.txt
-	touch bar.txt
+smake.o:smake.cpp:compile smake.o
+	c++ smake.cpp -c -o smake.o -g -Wall -Wextra -fsanitize=address
 
-baz.txt::Create baz.txt
-	touch baz.txt
-
-clean::clean all.
-	echo clean
+clean:
+	rm -f smake.o a.out
