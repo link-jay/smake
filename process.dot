@@ -1,7 +1,7 @@
 digraph G {
     subgraph cluster_a {
 	label="run_relay_rule"
-	"target_rule" -> "run_command" [label="no relay"]
+	"target_rule" -> "run_command" [taillabel="no relay"]
 	"target_rule" -> "relay_file"
 	"relay_file" [shape=diamond]
 	"relay_file" -> "check_time" [label="Y"]
@@ -9,11 +9,11 @@ digraph G {
 	"run_relay_rule" -> "run_command" [stype=dotted, penwidth=2]
 	"target_rule" [shape=diamond]
 	"run_relay_rule" -> "check_time" [style=dashed]
-	"check_time" -> "do_nothing" [label="target>relay", style=dashed]
-	"check_time" -> "run_command" [label="target<relay"]
-	"check_time" -> "exsit_rule" [label="target>relay"]
+	"check_time" -> "do_nothing" [label="not stale", style=dashed]
+	"check_time" -> "run_command" [label="stale"]
+	"check_time" -> "exsit_rule" [label="not stale/no target file"]
 	"check_time" [shape=diamond]
-	"exsit_rule" -> "run_relay_rule" [label="Y"]
+	"exsit_rule" -> "run_relay_rule" [label="Y", stype=dotted, penwidth=3]
 	"exsit_rule" -> "do_nothing" [label="N"]
 	"exsit_rule" [shape=diamond]
     }

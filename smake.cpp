@@ -10,7 +10,7 @@
 
 namespace fs = std::filesystem;
 
-typedef enum {NO_FILE, STALE, NO_STALE} file_status;
+typedef enum {NO_FILE, STALE, NOT_STALE} file_status;
 
 class Rules {
 private:
