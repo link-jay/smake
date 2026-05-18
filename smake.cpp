@@ -20,6 +20,7 @@ private:
   std::string info;
   fs::path file;
   fs::file_time_type last_modify_time;
+  bool checked;
   static std::vector<Rules*> rules;
   static std::unordered_map<std::string, Rules*> rules_table;
 
@@ -63,7 +64,7 @@ private:
     if (!info.empty()) std::cout << "[INFO] " << info << std::endl;
   }
 
-  static bool check_file_exsit(std::string target_name) {
+  static bool check_file_exist(std::string target_name) {
     for (const auto& entry : fs::directory_iterator("./")) {
       fs::path file_name = entry.path().filename().string();
       if (file_name == target_name) return true;
@@ -71,7 +72,7 @@ private:
     return false;
   }
 
-  static bool check_rule_exsit(std::string target_rule) {
+  static bool check_rule_exist(std::string target_rule) {
     if (rules_table.count(target_rule) != 0) return true;
     else return false;
   }
@@ -104,6 +105,7 @@ public:
   Rules(std::string rule_name): name(rule_name) {
     rules.push_back(this);
     rules_table[name] = this;
+    checked = false;
   }
 
   static void load(void) {
@@ -152,11 +154,13 @@ public:
 
   static void run_rule(std::string target) {
     if (rules_table.count(target) == 0) {
-      std::cerr << "Error: " << target << " do not exsit." << std::endl;
+      std::cerr << "Error: " << target << " do not exist." << std::endl;
       free();
       exit(1);
     }
     Rules* target_rule = rules_table[target];
+    if (target_rule->checked) return;
+    else target_rule->checked = true;
     // NOTE: the `load` makes every rule has a dependence, even it's `""`, so use this instead of empty().
     if (target_rule->dependence[0] == "") {
       target_rule->run_command();
@@ -165,9 +169,9 @@ public:
     bool run = false;
     for (size_t i = 0; i < target_rule->dependence.size(); i++) {
       std::string relay = target_rule->dependence[i];
-      if (check_rule_exsit(relay)) {
+      if (check_rule_exist(relay)) {
 	run_rule(relay);
-	if (check_file_exsit(relay)) {
+	if (check_file_exist(relay)) {
 	  if (check_time(target, relay) == STALE) {
 	    run = true;
 	  } else {
@@ -177,14 +181,14 @@ public:
 	  run = true;
 	}
       } else {
-	if (check_file_exsit(relay)) {
+	if (check_file_exist(relay)) {
 	  if (check_time(target, relay) == STALE) {
 	    run = true;
 	  } else {
 	    continue;
 	  }
 	} else {
-	  std::cerr << "Error: " << relay << " do not exsit." << std::endl;
+	  std::cerr << "Error: " << relay << " do not exist." << std::endl;
 	  free();
 	  exit(1);
 	}
@@ -192,53 +196,6 @@ public:
     }
     if (run) target_rule->run_command();
   }
-    
-  // static void run_rule(std::string target) {
-  //   if (rules_table.count(target) == 0) {
-  //     std::cerr << "Error: " << target << " do not exsit." << std::endl;
-  //     free();
-  //     exit(1);
-  //   }
-  //   Rules* target_rule = rules_table[target];
-  //   // NOTE: the `load` makes every rule has a dependence, even it's `""`, so use this instead of empty().
-  //   if (target_rule->dependence[0] == "") {
-  //     target_rule->run_command();
-  //     return;
-  //   }
-  //   bool run = false;
-  //   for (size_t i = 0; i < target_rule->dependence.size(); i++) {
-  //     std::string relay = target_rule->dependence[i];
-  //     if (check_file_exsit(relay)) {
-  // 	if (check_time(target, relay) == STALE) {
-  // 	  if (check_rule_exsit(relay)) {
-  // 	    run_rule(relay);
-  // 	  }
-  // 	  run=true;
-  // 	} else {
-  // 	  if (check_rule_exsit(relay)) {
-  // 	    run_rule(relay);
-  // 	    if (check_time(target, relay) == STALE) {
-  // 	      run=true;
-  // 	    } else {
-  // 	      continue;
-  // 	    }
-  // 	  } else {
-  // 	    continue;
-  // 	  }
-  // 	}
-  //     } else {
-  // 	if (check_rule_exsit(relay)) {
-  // 	  run_rule(relay);
-  // 	  run = true;
-  // 	} else {
-  // 	  std::cerr << "Error: " << relay << " do not exsit." << std::endl;
-  // 	  free();
-  // 	  exit(1);
-  // 	}
-  //     }
-  //   }
-  //   if (run) target_rule->run_command();
-  // }
 
   static void run(void) {
     run_rule("_");

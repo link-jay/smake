@@ -2,25 +2,25 @@ digraph G {
     subgraph cluster_g {
 	label="run_target_rule"
 	"target_rule" -> "run_command" [label="no relay"]
-	"target_rule" -> "exsit_rule"
+	"target_rule" -> "exist_rule"
 	subgraph cluster_a {
 	    label= "has relay"
-	    "exsit_rule" -> "a1"
+	    "exist_rule" -> "a1"
 	    subgraph cluster_a1 {
 		label="N"
-		"a1" [label="exsit_file"]
+		"a1" [label="exist_file"]
 		"a1" -> "error" [label=N]
 		"a1" -> "check_time" [label="Y"]
 		"check_time" -> "do_nothing" [label="not stale"]
 		"check_time" -> "a1_1" [label="stale"]
 		"a1_1" [label="run_command"]
 	    }
-	    "exsit_rule" -> "a2"
+	    "exist_rule" -> "a2"
 	    subgraph cluster_a2 {
 		label="Y"
 		"a2" [label="run_relay_rule"]
 		"a2" -> "a2_1"
-		"a2_1" [label="exsit_file"]
+		"a2_1" [label="exist_file"]
 		"a2_1" -> "a2_2" [label="N"]
 		"a2_2" [label="run_command"]
 		"a2_1" -> "a2_3" [label="Y"]
