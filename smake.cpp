@@ -10,7 +10,7 @@
 
 namespace fs = std::filesystem;
 
-typedef enum {NO_FILE, STALE, NOT_STALE} file_status;
+typedef enum {STALE, NOT_STALE} file_status;
 
 class Rules {
 private:
@@ -54,7 +54,7 @@ private:
       int res = system(commands[i].c_str());
       int res_code = WEXITSTATUS(res);
       if (res_code != 0) {
-	Rules::free();
+	free();
 	exit(res_code);
       }
     }
@@ -70,13 +70,13 @@ private:
   }
 
   static bool check_rule_exsit(std::string target_rule) {
-    if (Rules::rules_table.count(target_rule) != 0) return true;
+    if (rules_table.count(target_rule) != 0) return true;
     else return false;
   }
 
   static file_status check_time(std::string target, std::string relay) {
-    Rules* target_rule = Rules::rules_table[target];
-    if (target_rule->file.empty()) return NO_FILE;
+    Rules* target_rule = rules_table[target];
+    if (target_rule->file.empty()) return STALE;
     if (target_rule->last_modify_time < fs::last_write_time(relay)) {
       return STALE;
     } else {
@@ -87,13 +87,13 @@ private:
   static void regist_file() {
     for (const auto& entry : fs::directory_iterator("./")) {
       fs::path file_name = entry.path().filename();
-      if ((Rules::rules_table.count(file_name.string())) != 0) {
-	if (Rules::rules_table[file_name.string()]->file.empty()) {
-	  Rules::rules_table[file_name.string()]->set_file(file_name);
+      if ((rules_table.count(file_name.string())) != 0) {
+	if (rules_table[file_name.string()]->file.empty()) {
+	  rules_table[file_name.string()]->set_file(file_name);
 	} else {
 	  ;;
 	}
-	Rules::rules_table[file_name.string()]->set_time(fs::last_write_time(file_name));
+	rules_table[file_name.string()]->set_time(fs::last_write_time(file_name));
       }
     }
   }
@@ -134,11 +134,11 @@ public:
 	} else {
 	  assert(0);
 	}
-	if (Rules::rules.size() == 1) {
+	if (rules.size() == 1) {
 	  Rules* head_rule = new Rules("_");
-	  head_rule->set_dependence(Rules::rules[0]->name);
-	  Rules::rules.insert(Rules::rules.begin(), head_rule);
-	  Rules::rules.pop_back();
+	  head_rule->set_dependence(rules[0]->name);
+	  rules.insert(rules.begin(), head_rule);
+	  rules.pop_back();
 	}
       }
     }
@@ -147,37 +147,31 @@ public:
   }
 
   static void run_rule(std::string target) {
-    bool run = false;
-    if (Rules::rules_table.count(target) == 0) {
+    if (rules_table.count(target) == 0) {
       std::cerr << "Error: " << target << " do not exsit." << std::endl;
-      Rules::free();
+      free();
       exit(1);
     }
-    Rules* target_rule = Rules::rules_table[target];
+    Rules* target_rule = rules_table[target];
+    // NOTE: the `load` makes every rule has a dependence, even it's `""`, so use this instead of empty().
     if (target_rule->dependence[0] == "") {
       target_rule->run_command();
       return;
     }
+    bool run = false;
     for (size_t i = 0; i < target_rule->dependence.size(); i++) {
       std::string relay = target_rule->dependence[i];
-      if (Rules::check_file_exsit(relay)) {
-	if (Rules::check_time(target, relay) == STALE) {
-	  run = true;
-	}
-	else if (Rules::check_time(target, relay) == NO_FILE) {
+      if (check_file_exsit(relay)) {
+	if (check_time(target, relay) == STALE) {
 	  if (check_rule_exsit(relay)) {
 	    run_rule(relay);
-	    run = true;
 	  }
-	  else {
-	    continue;
-	  }
-	}
-	else {
-	  if (Rules::check_rule_exsit(relay)) {
+	  run=true;
+	} else {
+	  if (check_rule_exsit(relay)) {
 	    run_rule(relay);
-	    if (Rules::check_time(target, relay) == STALE) {
-	      run = true;
+	    if (check_time(target, relay) == STALE) {
+	      run=true;
 	    } else {
 	      continue;
 	    }
@@ -186,17 +180,17 @@ public:
 	  }
 	}
       } else {
-	if (!Rules::check_rule_exsit(relay)) {
+	if (check_rule_exsit(relay)) {
+	  run_rule(relay);
+	  run = true;
+	} else {
 	  std::cerr << "Error: " << relay << " do not exsit." << std::endl;
-	  Rules::free();
+	  free();
 	  exit(1);
 	}
-	run_rule(relay);
-	run = true;
       }
     }
     if (run) target_rule->run_command();
-    else return;
   }
 
   static void run(void) {
@@ -204,25 +198,25 @@ public:
   }
 
   static void dump(void) {
-    for (size_t j = 0; j < Rules::rules.size(); j++) {
-      std::cout << "[RULE] " << Rules::rules[j]->name << std::endl;
+    for (size_t j = 0; j < rules.size(); j++) {
+      std::cout << "[RULE] " << rules[j]->name << std::endl;
       printf("[DEPENDENCE] ");
-      for (size_t i = 0; i < Rules::rules[j]->dependence.size(); i++) {
-	std::cout << Rules::rules[j]->dependence[i] << " ";
+      for (size_t i = 0; i < rules[j]->dependence.size(); i++) {
+	std::cout << rules[j]->dependence[i] << " ";
       }
       puts("");
       printf("[COMMANDS] ");
-      for (size_t i = 0; i < Rules::rules[j]->commands.size(); i++) {
-	std::cout << Rules::rules[j]->commands[i] << std::endl;
+      for (size_t i = 0; i < rules[j]->commands.size(); i++) {
+	std::cout << rules[j]->commands[i] << std::endl;
       }
-      std::cout << "[INFO] " << Rules::rules[j]->info <<std::endl;
-      std::cout << "[FILE] " << Rules::rules[j]->file.string() << std::endl;
+      std::cout << "[INFO] " << rules[j]->info <<std::endl;
+      std::cout << "[FILE] " << rules[j]->file.string() << std::endl;
       puts("");
     }
   }
 
   static void free(void) {
-    for (size_t i = 0; i < Rules::rules.size(); i++) {
+    for (size_t i = 0; i < rules.size(); i++) {
       delete rules[i];
     }
   }
