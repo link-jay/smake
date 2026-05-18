@@ -4,5 +4,5 @@ run:smake.o:compile a.out
 smake.o:smake.cpp:compile smake.o
 	c++ smake.cpp -c -o smake.o -g -Wall -Wextra -fsanitize=address
 
-clean:
-	rm -f smake.o a.out
+clean::have cleaned
+	rm -f smake.o

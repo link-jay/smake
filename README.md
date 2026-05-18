@@ -3,7 +3,7 @@ Simple make but with message.
 
 ## Feature
   * [x] print message when rules finished.
-  * [ ] run specified rule.
+  * [x] run specified rule.
   * [x] track modified files
   * [ ] different message in different status.
 
