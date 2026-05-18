@@ -20,6 +20,8 @@ private:
   std::string info;
   fs::path file;
   fs::file_time_type last_modify_time;
+  static std::vector<Rules*> rules;
+  static std::unordered_map<std::string, Rules*> rules_table;
 
   void set_command(std::string cmds) {
     commands.push_back(cmds);
@@ -99,9 +101,6 @@ private:
   }
 
 public:
-  static std::vector<Rules*> rules;
-  static std::unordered_map<std::string, Rules*> rules_table;
-
   Rules(std::string rule_name): name(rule_name) {
     rules.push_back(this);
     rules_table[name] = this;
@@ -116,7 +115,10 @@ public:
     std::string line;
     while (getline(makefile, line)) {
       if (line[0] == '\t') {
-	if (rules.empty()) assert(0);
+	if (rules.empty()) {
+	  std::cerr << "Must set a rule first." << std::endl;
+	  exit(1);
+	}
 	rules.back()->set_command(line.substr(1, -1));
       }
       else if (line[0] == '\0') continue;
@@ -132,7 +134,9 @@ public:
 	    new_rule->set_dependence(line.substr(pos+1, -1));
 	  }
 	} else {
-	  assert(0);
+	  std::cerr << "Lack split symbol." << std::endl;
+	  free();
+	  exit(1);
 	}
 	if (rules.size() == 1) {
 	  Rules* head_rule = new Rules("_");
@@ -161,28 +165,24 @@ public:
     bool run = false;
     for (size_t i = 0; i < target_rule->dependence.size(); i++) {
       std::string relay = target_rule->dependence[i];
-      if (check_file_exsit(relay)) {
-	if (check_time(target, relay) == STALE) {
-	  if (check_rule_exsit(relay)) {
-	    run_rule(relay);
-	  }
-	  run=true;
-	} else {
-	  if (check_rule_exsit(relay)) {
-	    run_rule(relay);
-	    if (check_time(target, relay) == STALE) {
-	      run=true;
-	    } else {
-	      continue;
-	    }
+      if (check_rule_exsit(relay)) {
+	run_rule(relay);
+	if (check_file_exsit(relay)) {
+	  if (check_time(target, relay) == STALE) {
+	    run = true;
 	  } else {
 	    continue;
 	  }
+	} else {
+	  run = true;
 	}
       } else {
-	if (check_rule_exsit(relay)) {
-	  run_rule(relay);
-	  run = true;
+	if (check_file_exsit(relay)) {
+	  if (check_time(target, relay) == STALE) {
+	    run = true;
+	  } else {
+	    continue;
+	  }
 	} else {
 	  std::cerr << "Error: " << relay << " do not exsit." << std::endl;
 	  free();
@@ -192,6 +192,53 @@ public:
     }
     if (run) target_rule->run_command();
   }
+    
+  // static void run_rule(std::string target) {
+  //   if (rules_table.count(target) == 0) {
+  //     std::cerr << "Error: " << target << " do not exsit." << std::endl;
+  //     free();
+  //     exit(1);
+  //   }
+  //   Rules* target_rule = rules_table[target];
+  //   // NOTE: the `load` makes every rule has a dependence, even it's `""`, so use this instead of empty().
+  //   if (target_rule->dependence[0] == "") {
+  //     target_rule->run_command();
+  //     return;
+  //   }
+  //   bool run = false;
+  //   for (size_t i = 0; i < target_rule->dependence.size(); i++) {
+  //     std::string relay = target_rule->dependence[i];
+  //     if (check_file_exsit(relay)) {
+  // 	if (check_time(target, relay) == STALE) {
+  // 	  if (check_rule_exsit(relay)) {
+  // 	    run_rule(relay);
+  // 	  }
+  // 	  run=true;
+  // 	} else {
+  // 	  if (check_rule_exsit(relay)) {
+  // 	    run_rule(relay);
+  // 	    if (check_time(target, relay) == STALE) {
+  // 	      run=true;
+  // 	    } else {
+  // 	      continue;
+  // 	    }
+  // 	  } else {
+  // 	    continue;
+  // 	  }
+  // 	}
+  //     } else {
+  // 	if (check_rule_exsit(relay)) {
+  // 	  run_rule(relay);
+  // 	  run = true;
+  // 	} else {
+  // 	  std::cerr << "Error: " << relay << " do not exsit." << std::endl;
+  // 	  free();
+  // 	  exit(1);
+  // 	}
+  //     }
+  //   }
+  //   if (run) target_rule->run_command();
+  // }
 
   static void run(void) {
     run_rule("_");
