@@ -1,20 +1,41 @@
 digraph G {
-    subgraph cluster_a {
-	label="run_relay_rule"
-	"target_rule" -> "run_command" [taillabel="no relay"]
-	"target_rule" -> "relay_file"
-	"relay_file" [shape=diamond]
-	"relay_file" -> "check_time" [label="Y"]
-	"relay_file" -> "run_relay_rule" [stype=dotted, penwidth=2, label="N"]
-	"run_relay_rule" -> "run_command" [stype=dotted, penwidth=2]
-	"target_rule" [shape=diamond]
-	"run_relay_rule" -> "check_time" [style=dashed]
-	"check_time" -> "do_nothing" [label="not stale", style=dashed]
-	"check_time" -> "run_command" [label="stale"]
-	"check_time" -> "exsit_rule" [label="not stale/no target file"]
-	"check_time" [shape=diamond]
-	"exsit_rule" -> "run_relay_rule" [label="Y", stype=dotted, penwidth=3]
-	"exsit_rule" -> "do_nothing" [label="N"]
-	"exsit_rule" [shape=diamond]
+    compound=true
+    subgraph cluster_g {
+	label="run_target_rule"
+	"target_rule" -> "run_command" [xlabel="no relay"]
+	"target_rule" -> "check_exsit_file"
+	subgraph cluster_a {
+	    label="has relay"
+	    "check_exsit_file" -> "check_exsit_rule" [label="N"]
+	    "check_exsit_rule" -> "error" [label="N"]
+	    "check_exsit_file" -> "check_time" [label="Y"]
+	    "check_time" -> "a1"
+	    subgraph cluster_a1 {
+		label="not_stale"
+		"a1" [label="check_exsit_rule"]
+		"a1" -> "do_nothing" [label="N"]
+		"a1" -> "run_relay_rule" [label="Y"]
+		"run_relay_rule" -> "a1_1"
+		"a1_1" [label="check_time"]
+		"a1_1" -> "do_nothing" [label="not_stale"]
+		"a1_1" -> "a1_2" [label="stale"]
+		"a1_2" [label="run_command"]
+	    }
+	    "check_time" -> "a2"
+	    subgraph cluster_a2 {
+		label="stale"
+		"a2" [label="check_exsit_rule"]
+		"a2" -> "a2_1" [label="N"]
+		"a2_1" [label="run_command"]
+		"a2" -> "a2_2" [label="Y"]
+		"a2_2" [label=run_relay_rule]
+		"a2_2" -> "a2_3"
+		"a2_3" [label="run_command"]
+	    }
+	    "check_exsit_rule" -> "a3" [label="Y"]
+	    "a3" [label="run_relay_rule"]
+	    "a3" -> "a4"
+	    "a4" [label="run_command"]
+	}
     }
 }
