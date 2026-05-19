@@ -131,7 +131,7 @@ public:
     }
     std::string line;
     getline(makefile, line);
-    if (line[0] == '?') SILENT = true;
+    if (line[0] == '#' && line[1] == '?') SILENT = true;
     else makefile.seekg(0, std::ios::beg);
     while (getline(makefile, line)) {
       if (line[0] == '\t') {
@@ -141,7 +141,7 @@ public:
 	}
 	rules.back()->set_command(line.substr(1, -1));
       }
-      else if (line[0] == '\0') continue;
+      else if (line[0] == '\0' || line[0] == '#') continue;
       else {
 	size_t pos = line.find(':');
 	if (pos != std::string::npos) {
