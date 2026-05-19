@@ -10,6 +10,8 @@
 
 namespace fs = std::filesystem;
 
+bool SILENT = false;
+
 typedef enum {STALE, NOT_STALE} file_status;
 
 class Rules {
@@ -51,14 +53,27 @@ private:
     info = _info;
   }
 
-  void run_command() {
+  void run_commands() {
     for (size_t i = 0; i < commands.size(); i++) {
       std::cout << "[CMD] " << commands[i] << std::endl;
-      int res = system(commands[i].c_str());
+      FILE* pipe = popen(commands[i].c_str(), "r");
+      if (pipe == NULL) {
+	clear();
+	perror("popen failed");
+      }
+      std::string output;
+      char buf[1024];
+      while (fgets(buf, sizeof(buf), pipe)) {
+	output += buf;
+      }
+      int res = pclose(pipe);
       int res_code = WEXITSTATUS(res);
       if (res_code != 0) {
-	free();
+	clear();
 	exit(res_code);
+      }
+      if (!SILENT) {
+	std::cout << output;
       }
     }
     if (!info.empty()) std::cout << "[INFO] " << info << std::endl;
@@ -115,6 +130,9 @@ public:
       exit(1);
     }
     std::string line;
+    getline(makefile, line);
+    if (line[0] == '#' && line[1] == '?') SILENT = true;
+    else makefile.seekg(0, std::ios::beg);
     while (getline(makefile, line)) {
       if (line[0] == '\t') {
 	if (rules.empty()) {
@@ -123,7 +141,7 @@ public:
 	}
 	rules.back()->set_command(line.substr(1, -1));
       }
-      else if (line[0] == '\0') continue;
+      else if (line[0] == '\0' || line[0] == '#') continue;
       else {
 	size_t pos = line.find(':');
 	if (pos != std::string::npos) {
@@ -137,7 +155,7 @@ public:
 	  }
 	} else {
 	  std::cerr << "Lack split symbol." << std::endl;
-	  free();
+	  clear();
 	  exit(1);
 	}
 	if (rules.size() == 1) {
@@ -155,7 +173,7 @@ public:
   static void run_rule(std::string target) {
     if (rules_table.count(target) == 0) {
       std::cerr << "Error: " << target << " do not exist." << std::endl;
-      free();
+      clear();
       exit(1);
     }
     Rules* target_rule = rules_table[target];
@@ -163,7 +181,7 @@ public:
     else target_rule->checked = true;
     // NOTE: the `load` makes every rule has a dependence, even it's `""`, so use this instead of empty().
     if (target_rule->dependence[0] == "") {
-      target_rule->run_command();
+      target_rule->run_commands();
       return;
     }
     bool run = false;
@@ -189,12 +207,12 @@ public:
 	  }
 	} else {
 	  std::cerr << "Error: " << relay << " do not exist." << std::endl;
-	  free();
+	  clear();
 	  exit(1);
 	}
       }
     }
-    if (run) target_rule->run_command();
+    if (run) target_rule->run_commands();
   }
 
   static void run(void) {
@@ -219,12 +237,11 @@ public:
     }
   }
 
-  static void free(void) {
+  static void clear(void) {
     for (size_t i = 0; i < rules.size(); i++) {
       delete rules[i];
     }
   }
-
 };
 std::vector<Rules*> Rules::rules;
 std::unordered_map<std::string, Rules*> Rules::rules_table;
@@ -239,7 +256,7 @@ int main(int args, char* argv[]) {
     Rules::run();
   }
   puts("");
-  Rules::dump();
-  Rules::free();
+  // Rules::dump();
+  Rules::clear();
   return 0;
 }
