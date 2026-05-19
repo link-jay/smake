@@ -229,9 +229,15 @@ public:
 std::vector<Rules*> Rules::rules;
 std::unordered_map<std::string, Rules*> Rules::rules_table;
 
-int main() {
+int main(int args, char* argv[]) {
   Rules::load();
-  Rules::run();
+  if (args > 1) {
+    for (int i = 1; i < args; i++) {
+      Rules::run_rule(argv[i]);
+    }
+  } else {
+    Rules::run();
+  }
   puts("");
   Rules::dump();
   Rules::free();
