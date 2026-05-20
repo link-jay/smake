@@ -22,7 +22,8 @@ private:
   std::string info;
   fs::path file;
   fs::file_time_type last_modify_time;
-  bool checked;
+  bool checked = false;
+  bool running = false;
   static std::vector<Rules*> rules;
   static std::unordered_map<std::string, Rules*> rules_table;
 
@@ -138,7 +139,6 @@ public:
   Rules(std::string rule_name): name(rule_name) {
     rules.push_back(this);
     rules_table[name] = this;
-    checked = false;
   }
 
   static void load(void) {
@@ -201,24 +201,23 @@ public:
       target_rule->run_commands();
       return;
     }
-    bool run = false;
     for (size_t i = 0; i < target_rule->dependence.size(); i++) {
       std::string relay = target_rule->dependence[i];
       if (check_rule_exist(relay)) {
 	run_rule(relay);
 	if (check_file_exist(relay)) {
 	  if (check_time(target, relay) == STALE) {
-	    run = true;
+	    target_rule->running = true;
 	  } else {
 	    continue;
 	  }
 	} else {
-	  run = true;
+	  target_rule->running = true;
 	}
       } else {
 	if (check_file_exist(relay)) {
 	  if (check_time(target, relay) == STALE) {
-	    run = true;
+	    target_rule->running = true;
 	  } else {
 	    continue;
 	  }
@@ -229,11 +228,14 @@ public:
 	}
       }
     }
-    if (run) target_rule->run_commands();
+    if (target_rule->running) target_rule->run_commands();
   }
 
   static void run(void) {
     run_rule("_");
+    if (rules[1]->running == false) {
+      std::cout << "All files are lastest." << std::endl;
+    }
   }
 
   static void dump(void) {
