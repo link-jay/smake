@@ -17,7 +17,8 @@ target:[dependence[:message]]
 	[commands]
 ```
 You can use `#?flag` at the top of file to change the behavior of smake.  
-`#?/#?output`can close the outputs of commands.  
+`#?/#?OUTPUT`can close the outputs of commands.  
+`#?ALL` only keeps the [INFO] and [ERROR].  
 
 ## Process
 ![process.svg](process.svg)

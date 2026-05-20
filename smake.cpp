@@ -10,7 +10,7 @@
 
 namespace fs = std::filesystem;
 
-bool SILENT = false;
+enum {NO, OUTPUT, ALL} SILENT = NO;
 
 typedef enum {STALE, NOT_STALE} file_status;
 
@@ -33,7 +33,7 @@ private:
   void set_dependence(std::string dep) {
     size_t s_pos = 0;
     size_t e_pos = dep.find(' ', s_pos);
-     while (e_pos != std::string::npos) {
+    while (e_pos != std::string::npos) {
       this->dependence.push_back(dep.substr(s_pos, e_pos-s_pos));
       s_pos = e_pos + 1;
       e_pos = dep.find(' ', s_pos);
@@ -55,7 +55,9 @@ private:
 
   void run_commands() {
     for (size_t i = 0; i < commands.size(); i++) {
-      std::cout << "[CMD] " << commands[i] << std::endl;
+      if (SILENT != ALL) {
+        std::cout << "[CMD] " << commands[i] << std::endl;
+      }
       FILE* pipe = popen(commands[i].c_str(), "r");
       if (pipe == NULL) {
 	clear();
@@ -69,10 +71,13 @@ private:
       int res = pclose(pipe);
       int res_code = WEXITSTATUS(res);
       if (res_code != 0) {
+        if (SILENT == ALL) {
+          std::cerr << "[ERROR] " << commands[i] << std::endl;
+        }
 	clear();
 	exit(res_code);
       }
-      if (!SILENT) {
+      if (SILENT == NO) {
 	std::cout << output;
       }
     }
@@ -118,7 +123,10 @@ private:
 
   static bool check_flag(std::string flag) {
     if (flag == "#?" || flag == "#?OUTPUT") {
-      SILENT = true;
+      SILENT = OUTPUT;
+    }
+    else if (flag == "#?ALL") {
+      SILENT = ALL;
     }
     else {
       return false;
