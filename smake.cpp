@@ -116,6 +116,16 @@ private:
     }
   }
 
+  static bool check_flag(std::string flag) {
+    if (flag == "#?" || flag == "#?OUTPUT") {
+      SILENT = true;
+    }
+    else {
+      return false;
+    }
+    return true;
+  }
+  
 public:
   Rules(std::string rule_name): name(rule_name) {
     rules.push_back(this);
@@ -131,8 +141,7 @@ public:
     }
     std::string line;
     getline(makefile, line);
-    if (line[0] == '#' && line[1] == '?') SILENT = true;
-    else makefile.seekg(0, std::ios::beg);
+    if (!check_flag(line)) makefile.seekg(0, std::ios::beg);
     while (getline(makefile, line)) {
       if (line[0] == '\t') {
 	if (rules.empty()) {
@@ -255,7 +264,7 @@ int main(int args, char* argv[]) {
   } else {
     Rules::run();
   }
-  puts("");
+  // puts("");
   // Rules::dump();
   Rules::clear();
   return 0;

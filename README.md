@@ -12,11 +12,12 @@ run command `c++ smake.cpp -o smake` and prepare a `Makefile`, then run `./smake
 
 ## Template
 ```Makefile
-[#?]
+[#?flag]
 target:[dependence[:message]]
 	[commands]
 ```
-You can use `#?` at the top of file to close the outputs of commands. Notice that the text after the `#?` are not readable. Maybe you can do something via it.  
+You can use `#?flag` at the top of file to change the behavior of smake.  
+`#?/#?output`can close the outputs of commands.  
 
 ## Process
 ![process.svg](process.svg)
