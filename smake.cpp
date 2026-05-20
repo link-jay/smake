@@ -10,7 +10,7 @@
 
 namespace fs = std::filesystem;
 
-bool SILENT = false;
+enum {NO, OUTPUT, ALL} SILENT = NO;
 
 typedef enum {STALE, NOT_STALE} file_status;
 
@@ -22,7 +22,8 @@ private:
   std::string info;
   fs::path file;
   fs::file_time_type last_modify_time;
-  bool checked;
+  bool checked = false;
+  bool running = false;
   static std::vector<Rules*> rules;
   static std::unordered_map<std::string, Rules*> rules_table;
 
@@ -33,7 +34,7 @@ private:
   void set_dependence(std::string dep) {
     size_t s_pos = 0;
     size_t e_pos = dep.find(' ', s_pos);
-     while (e_pos != std::string::npos) {
+    while (e_pos != std::string::npos) {
       this->dependence.push_back(dep.substr(s_pos, e_pos-s_pos));
       s_pos = e_pos + 1;
       e_pos = dep.find(' ', s_pos);
@@ -55,7 +56,9 @@ private:
 
   void run_commands() {
     for (size_t i = 0; i < commands.size(); i++) {
-      std::cout << "[CMD] " << commands[i] << std::endl;
+      if (SILENT != ALL) {
+        std::cout << "[CMD] " << commands[i] << std::endl;
+      }
       FILE* pipe = popen(commands[i].c_str(), "r");
       if (pipe == NULL) {
 	clear();
@@ -69,10 +72,13 @@ private:
       int res = pclose(pipe);
       int res_code = WEXITSTATUS(res);
       if (res_code != 0) {
+        if (SILENT == ALL) {
+          std::cerr << "[ERROR] " << commands[i] << std::endl;
+        }
 	clear();
 	exit(res_code);
       }
-      if (!SILENT) {
+      if (SILENT == NO) {
 	std::cout << output;
       }
     }
@@ -116,11 +122,23 @@ private:
     }
   }
 
+  static bool check_flag(std::string flag) {
+    if (flag == "#?" || flag == "#?OUTPUT") {
+      SILENT = OUTPUT;
+    }
+    else if (flag == "#?ALL") {
+      SILENT = ALL;
+    }
+    else {
+      return false;
+    }
+    return true;
+  }
+  
 public:
   Rules(std::string rule_name): name(rule_name) {
     rules.push_back(this);
     rules_table[name] = this;
-    checked = false;
   }
 
   static void load(void) {
@@ -131,8 +149,7 @@ public:
     }
     std::string line;
     getline(makefile, line);
-    if (line[0] == '#' && line[1] == '?') SILENT = true;
-    else makefile.seekg(0, std::ios::beg);
+    if (!check_flag(line)) makefile.seekg(0, std::ios::beg);
     while (getline(makefile, line)) {
       if (line[0] == '\t') {
 	if (rules.empty()) {
@@ -184,24 +201,23 @@ public:
       target_rule->run_commands();
       return;
     }
-    bool run = false;
     for (size_t i = 0; i < target_rule->dependence.size(); i++) {
       std::string relay = target_rule->dependence[i];
       if (check_rule_exist(relay)) {
 	run_rule(relay);
 	if (check_file_exist(relay)) {
 	  if (check_time(target, relay) == STALE) {
-	    run = true;
+	    target_rule->running = true;
 	  } else {
 	    continue;
 	  }
 	} else {
-	  run = true;
+	  target_rule->running = true;
 	}
       } else {
 	if (check_file_exist(relay)) {
 	  if (check_time(target, relay) == STALE) {
-	    run = true;
+	    target_rule->running = true;
 	  } else {
 	    continue;
 	  }
@@ -212,11 +228,14 @@ public:
 	}
       }
     }
-    if (run) target_rule->run_commands();
+    if (target_rule->running) target_rule->run_commands();
   }
 
   static void run(void) {
     run_rule("_");
+    if (rules[1]->running == false) {
+      std::cout << "All files are lastest." << std::endl;
+    }
   }
 
   static void dump(void) {
@@ -255,7 +274,7 @@ int main(int args, char* argv[]) {
   } else {
     Rules::run();
   }
-  puts("");
+  // puts("");
   // Rules::dump();
   Rules::clear();
   return 0;
