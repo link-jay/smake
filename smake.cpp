@@ -198,6 +198,7 @@ public:
     else target_rule->checked = true;
     // NOTE: the `load` makes every rule has a dependence, even it's `""`, so use this instead of empty().
     if (target_rule->dependence[0] == "") {
+      target_rule->running = true;
       target_rule->run_commands();
       return;
     }
