@@ -14,6 +14,32 @@ enum {NO, OUTPUT, ALL} SILENT = NO;
 
 typedef enum {STALE, NOT_STALE} file_status;
 
+std::vector<std::string> split_str(std::string str, std::string sep) {
+  std::vector<std::string> strs;
+  size_t start = 0;
+  size_t pos = str.find(sep);
+  while(pos != std::string::npos) {
+    strs.push_back(str.substr(start, pos - start));
+    start = pos + 1;
+    pos = str.find(sep, start);
+  }
+  if (start != 0) {
+    strs.push_back(str.substr(start, pos - start));
+  } else {
+    strs.push_back(str);
+  }
+  return strs;
+}
+
+std::string join_str(std::vector<std::string> arr, std::string sep) {
+  std::string buf = "";
+  buf += arr[0];
+  for (size_t i = 1; i < arr.size(); i++) {
+    buf += sep + arr[i];
+  }
+  return buf;
+}
+
 class Rules {
 private:
   std::string name;
@@ -157,20 +183,17 @@ public:
       }
       else if (line[0] == '\0' || line.starts_with("#")) continue;
       else {
-	size_t pos = line.find(':');
-	if (pos != std::string::npos) {
-	  Rules* new_rule = new Rules(line.substr(0, pos));
-	  size_t pos2 = line.find(':', pos+1);
-	  if (pos2 != std::string::npos) {
-	    new_rule->set_dependence(line.substr(pos+1, pos2-pos-1));
-	    new_rule->set_info(line.substr(pos2+1, -1));
-	  } else {
-	    new_rule->set_dependence(line.substr(pos+1, -1));
-	  }
-	} else {
-	  std::cerr << "Lack split symbol." << std::endl;
+	std::vector<std::string> tmp = split_str(line, ":");
+	if (tmp.size() < 2) {
 	  clear();
+	  std::cerr << "Lack split symbol." << std::endl;
 	  exit(1);
+	}
+	Rules* new_rule = new Rules(tmp[0]);
+	new_rule->set_dependence(tmp[1]);
+	if (tmp.size() > 2) {
+	  std::string _info = join_str(std::vector<std::string>(tmp.begin()+2, tmp.end()), ":");
+	  new_rule->set_info(_info);
 	}
 	if (rules.size() == 1) {
 	  Rules* head_rule = new Rules("_");
