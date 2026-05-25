@@ -122,17 +122,13 @@ private:
     }
   }
 
-  static bool check_flag(std::string flag) {
+  static void check_flag(std::string flag) {
     if (flag == "#?" || flag == "#?OUTPUT") {
       SILENT = OUTPUT;
     }
     else if (flag == "#?ALL") {
       SILENT = ALL;
     }
-    else {
-      return false;
-    }
-    return true;
   }
   
 public:
@@ -148,17 +144,18 @@ public:
       exit(1);
     }
     std::string line;
-    getline(makefile, line);
-    if (!check_flag(line)) makefile.seekg(0, std::ios::beg);
     while (getline(makefile, line)) {
-      if (line[0] == '\t') {
+      if (line.starts_with("\t")) {
 	if (rules.empty()) {
 	  std::cerr << "Must set a rule first." << std::endl;
 	  exit(1);
 	}
 	rules.back()->set_command(line.substr(1, -1));
       }
-      else if (line[0] == '\0' || line[0] == '#') continue;
+      else if (line.starts_with("#?")) {
+	check_flag(line);
+      }
+      else if (line[0] == '\0' || line.starts_with("#")) continue;
       else {
 	size_t pos = line.find(':');
 	if (pos != std::string::npos) {
