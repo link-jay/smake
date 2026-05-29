@@ -1,6 +1,10 @@
 # smake
 Simple make but with message.  
 
+## Requirements
+- Linux
+- C++ compiler
+
 ## Feature
   * [x] print message when rules finished.
   * [x] run specified rule.
